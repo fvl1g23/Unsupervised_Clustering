@@ -12,7 +12,7 @@ def KM_opt(cohort, gene_feat, max_n_clust, cohort_name='SPARC', random_state=42)
     if cohort_name == 'SPARC':
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
-        X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
     cluster_range = range(2, max_n_clust + 1)
     results = []
 
@@ -53,7 +53,7 @@ def KM(cohort, gene_feat, n_clust, cohort_name='SPARC', random_state=42):
     if cohort_name == 'SPARC':
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
-        X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
 
     kmeans = KMeans(n_clusters=n_clust, random_state=random_state)
     kmeans.fit(X)
