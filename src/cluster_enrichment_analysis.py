@@ -65,6 +65,8 @@ def analyze_cluster_deviations(df, categorical_cols, cluster_col="Cluster", alph
         elif col == "Crohn s disease phenotype":
             cont_table = cont_table.loc[:,["Inflammatory non-penetrating, non-stricturing (B1)",
             "Stricturing (B2)", "Penetrating (B3)", "Both stricturing and penetrating (B2B3)"]]
+        elif col == "IBD phenotype":
+            cont_table = cont_table.loc[:, ["B1", "B2", "B3", "B2B3"]]
 
         mask = (cont_table < 5).any(axis=1)
 
