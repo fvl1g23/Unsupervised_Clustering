@@ -6,6 +6,9 @@ from sklearn.metrics import silhouette_score, davies_bouldin_score, adjusted_ran
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from collections import Counter
+import itertools
+from joblib import Parallel, delayed
+from scipy.stats import sem, t
 
 ### Optimise a K-Means algorithm for the silhouette score and the Davies-Bouldin index
 def KM_opt(cohort, gene_feat, max_n_clust, cohort_name='SPARC', random_state=42):
@@ -67,6 +70,116 @@ def KM_opt_stabl(cohort, gene_feat, max_n_clust, cohort_name='SPARC', n_iter=50,
             ari = adjusted_rand_score(labels1, labels2)
             stability_scores[k].append(ari)
     return stability_scores
+
+def _run_single_kmeans(X, k, rs):
+    model = KMeans(n_clusters=k, n_init='auto', random_state=rs)
+    labels = model.fit_predict(X)
+    sil = silhouette_score(X, labels)
+    dbi = davies_bouldin_score(X, labels)
+    return labels, sil, dbi
+
+def compute_clustering_metrics(cohort, gene_feat, max_n_clust, cohort_name="SPARC", n_iter=50, random_state_seed=42, n_jobs=-1, confidence=0.95):
+    """
+        Compute mean, std, and 95% CI for ARI, Silhouette, and DBI for each k over multiple K-Means runs.
+
+        Parameters:
+        - X : array-like or DataFrame of shape (n_samples, n_features)
+        - k_range : iterable of int
+            List or range of cluster counts to test.
+        - n_iter : int
+            Number of K-Means runs per k (each with a different random_state).
+        - random_state_seed : int or None
+            Seed for reproducibility of random states.
+
+        Returns:
+        - metrics_df : pd.DataFrame
+            DataFrame with columns:
+            ['k', 'mean_ari', 'std_ari', 'ci_ari',
+                   'mean_silhouette', 'std_silhouette', 'ci_silhouette',
+                   'mean_dbi', 'std_dbi', 'ci_dbi']
+    """
+    if cohort_name == 'SPARC':
+        X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
+    elif cohort_name == 'Soton':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+    cluster_range = range(2, max_n_clust + 1)
+    results = []
+    rng = np.random.default_rng(random_state_seed)
+
+    for k in cluster_range:
+        seeds = rng.integers(0, 1_000_000, size=n_iter)
+
+        # Parallel execution of clustering runs for this k
+        out = Parallel(n_jobs=n_jobs)(
+            delayed(_run_single_kmeans)(X, k, rs) for rs in seeds
+        )
+
+        labels_list, sils, dbis = zip(*out)
+
+        # Compute pairwise ARIs
+        aris = []
+        for i in range(n_iter):
+            for j in range(i + 1, n_iter):
+                ari = adjusted_rand_score(labels_list[i], labels_list[j])
+                aris.append(ari)
+
+        def ci(series):
+            if len(series) < 2:
+                return 0
+            s = np.array(series)
+            return sem(s) * t.ppf((1 + confidence) / 2., len(s) - 1)
+
+        results.append({
+            'k': k,
+            'mean_ari': np.mean(aris),
+            'std_ari': np.std(aris),
+            'ci_ari': ci(aris),
+            'mean_silhouette': np.mean(sils),
+            'std_silhouette': np.std(sils),
+            'ci_silhouette': ci(sils),
+            'mean_dbi': np.mean(dbis),
+            'std_dbi': np.std(dbis),
+            'ci_dbi': ci(dbis)
+        })
+
+    return pd.DataFrame(results)
+
+### Assess clustering stability for a given k
+def KM_random(cohort, gene_feat, n_clust, cohort_name='SPARC', n_runs=50, sample_fraction=0.8, random_state=None):
+    if cohort_name == 'SPARC':
+        X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
+    elif cohort_name == 'Soton':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+
+    rng = np.random.default_rng(random_state)
+    clusterings = []
+
+    for _ in range(n_runs):
+        sampled_idx = rng.choice(X.index, size=int(sample_fraction * len(X)), replace=False)
+        X_sample = X.loc[sampled_idx]
+        km = KMeans(n_clusters=n_clust, n_init='auto', random_state=None).fit(X_sample)
+        labels = pd.Series(km.labels_, index=X_sample.index)
+        clusterings.append(labels)
+
+    return clusterings
+
+def compute_ari_matrix(clusterings):
+    n = len(clusterings)
+    ari_matrix = np.zeros((n, n))
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            overlap = clusterings[i].index.intersection(clusterings[j].index)
+            if len(overlap) >= 2:
+                ari = adjusted_rand_score(
+                    clusterings[i].loc[overlap],
+                    clusterings[j].loc[overlap]
+                )
+                ari_matrix[i, j] = ari
+                ari_matrix[j, i] = ari
+
+    np.fill_diagonal(ari_matrix, 1.0)
+    return ari_matrix
 
 ### Iterate through n principal components in PCA to analyse explained variance
 def PCA_opt(cohort, gene_feat, max_n_comp, cohort_name='SPARC'):
