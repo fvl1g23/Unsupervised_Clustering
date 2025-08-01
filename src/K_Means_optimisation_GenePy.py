@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, davies_bouldin_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score, adjusted_rand_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.decomposition import PCA
 from collections import Counter
@@ -28,6 +28,45 @@ def KM_opt(cohort, gene_feat, max_n_clust, cohort_name='SPARC', random_state=42)
 
     results_df = pd.DataFrame(results, columns=['n_clusters', 'silhouette_score', 'DBI_score', 'max_cluster_size'])
     return results_df
+
+### Optimise a K-Means algorithm based on clustering stability
+def KM_opt_stabl(cohort, gene_feat, max_n_clust, cohort_name='SPARC', n_iter=50, sample_fraction=0.8, random_state=None):
+    if cohort_name == 'SPARC':
+        X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
+    elif cohort_name == 'Soton':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+    cluster_range = range(2, max_n_clust + 1)
+    rng = np.random.default_rng(random_state)
+    stability_scores = {k: [] for k in cluster_range}
+
+    for k in cluster_range:
+        for _ in range(n_iter):
+            # Step 1: Subsample the data twice
+            idx1 = rng.choice(X.index, size=int(0.8 * len(X)), replace=False)
+            idx2 = rng.choice(X.index, size=int(0.8 * len(X)), replace=False)
+            X1 = X.loc[idx1]
+            X2 = X.loc[idx2]
+
+            km1 = KMeans(n_clusters=k, n_init='auto', random_state=None).fit(X1)
+            km2 = KMeans(n_clusters=k, n_init='auto', random_state=None).fit(X2)
+
+            # Step 2: Find overlapping samples
+            overlap_idx = np.intersect1d(idx1, idx2)
+            if len(overlap_idx) < 2:
+                continue
+
+            # Step 3: Map overlap indices to their positions in idx1 and idx2
+            idx1_map = {sample_idx: pos for pos, sample_idx in enumerate(idx1)}
+            idx2_map = {sample_idx: pos for pos, sample_idx in enumerate(idx2)}
+
+            # Step 4: Get cluster labels for overlapping samples
+            labels1 = [km1.labels_[idx1_map[i]] for i in overlap_idx]
+            labels2 = [km2.labels_[idx2_map[i]] for i in overlap_idx]
+
+            # Step 5: Compute similarity (e.g., ARI)
+            ari = adjusted_rand_score(labels1, labels2)
+            stability_scores[k].append(ari)
+    return stability_scores
 
 ### Iterate through n principal components in PCA to analyse explained variance
 def PCA_opt(cohort, gene_feat, max_n_comp, cohort_name='SPARC'):
