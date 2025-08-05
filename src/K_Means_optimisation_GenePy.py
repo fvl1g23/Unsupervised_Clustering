@@ -101,7 +101,7 @@ def compute_clustering_metrics(cohort, gene_feat, max_n_clust, cohort_name="SPAR
     if cohort_name == 'SPARC':
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
-        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+        X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
     cluster_range = range(2, max_n_clust + 1)
     results = []
     rng = np.random.default_rng(random_state_seed)
@@ -205,7 +205,7 @@ def KM(cohort, gene_feat, n_clust, cohort_name='SPARC', random_state=42):
     if cohort_name == 'SPARC':
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
-        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+        X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
 
     kmeans = KMeans(n_clusters=n_clust, random_state=random_state)
     kmeans.fit(X)
@@ -252,12 +252,12 @@ def merge_phen_genepy(km_out,cohort, X, cohort_name='SPARC', phen=False):
     #Merge cluster labels with clinical features
     if phen==False:
         if cohort_name == 'SPARC':
-            km_out_phen = pd.merge(km_out, cohort.loc[:, ['SEX', 'DIAGNOSIS', 'Age at diagnosis', "CROHNS.DISEASE.PHENOTYPE", "IBD.SURGERY.FINAL"]],
+            km_out_phen = pd.merge(km_out, cohort.loc[:, ['SEX', 'DIAGNOSIS', 'Age.at.diagnosis', "CROHNS.DISEASE.PHENOTYPE", "IBD.SURGERY.FINAL"]],
                                    left_index=True, right_index=True)
 
         elif cohort_name == 'Soton':
             km_out_phen = pd.merge(km_out, cohort.loc[:,
-                                           ['Gender', 'Age at diagnosis', 'Diagnosis', "Stricturing", "Fistulating", "Granuloma", "IBD Surgery", "IBD phenotype"]],
+                                           ['Gender', 'Age.at.diagnosis', 'Diagnosis', "Stricturing", "Fistulating", "Granuloma", "IBD.Surgery", "IBD.phenotype"]],
                                    left_index=True, right_index=True)
     else:
         if cohort_name == 'SPARC':

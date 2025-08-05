@@ -133,6 +133,6 @@ def plot_clustering_metrics(metrics_df, invert_dbi=True, show_ci=True, vlines=No
 
     # Legends and title
     fig.legend(loc="upper right", bbox_to_anchor=(1, 1), bbox_transform=ax1.transAxes)
-    plt.title("K-Means Clustering Metrics vs Number of Clusters (k)")
+    #plt.title("K-Means Clustering Metrics vs Number of Clusters (k)")
     plt.tight_layout()
     plt.show()
