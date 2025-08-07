@@ -16,6 +16,8 @@ def KM_opt(cohort, gene_feat, max_n_clust, cohort_name='SPARC', random_state=42)
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
         X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+    elif cohort_name == 'MSCCR':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
     cluster_range = range(2, max_n_clust + 1)
     results = []
 
@@ -102,6 +104,8 @@ def compute_clustering_metrics(cohort, gene_feat, max_n_clust, cohort_name="SPAR
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
         X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+    elif cohort_name == 'MSCCR':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
     cluster_range = range(2, max_n_clust + 1)
     results = []
     rng = np.random.default_rng(random_state_seed)
@@ -206,6 +210,8 @@ def KM(cohort, gene_feat, n_clust, cohort_name='SPARC', random_state=42):
         X = cohort[cohort.columns[cohort.columns.isin(gene_feat.iloc[:, 2])]]
     elif cohort_name == 'Soton':
         X = cohort[cohort.columns[cohort.columns.str.split('_').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
+    elif cohort_name == 'MSCCR':
+        X = cohort[cohort.columns[cohort.columns.str.split('.').str[0].isin(gene_feat.iloc[:, 2].str.split('_').str[0])]]
 
     kmeans = KMeans(n_clusters=n_clust, random_state=random_state)
     kmeans.fit(X)
@@ -258,6 +264,10 @@ def merge_phen_genepy(km_out,cohort, X, cohort_name='SPARC', phen=False):
         elif cohort_name == 'Soton':
             km_out_phen = pd.merge(km_out, cohort.loc[:,
                                            ['Gender', 'Age.at.diagnosis', 'Diagnosis', "Stricturing", "Fistulating", "Granuloma", "IBD.Surgery", "IBD.phenotype"]],
+                                   left_index=True, right_index=True)
+        elif cohort_name == 'MSCCR':
+            km_out_phen = pd.merge(km_out, cohort.loc[:,
+            ['Sex', 'Age_at_diagnosis', 'IBD_diagnosis', 'Number_of_IBD_surgeries', "CD_behaviour"]],
                                    left_index=True, right_index=True)
     else:
         if cohort_name == 'SPARC':
