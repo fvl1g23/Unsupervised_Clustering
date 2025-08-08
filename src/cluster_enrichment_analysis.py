@@ -62,6 +62,8 @@ def analyze_cluster_deviations(df, categorical_cols, cluster_col="Cluster", alph
         cont_table = pd.crosstab(df[cluster_col], df[col])
         if col == "Diagnosis":
             cont_table = cont_table.loc[:,["CD", "UC"]]
+        elif col == "IBD_diagnosis":
+            cont_table = cont_table.loc[:,["Crohn's Disease", "Ulcerative Colitis"]]
         elif col == "Crohn s disease phenotype":
             cont_table = cont_table.loc[:,["Inflammatory non-penetrating, non-stricturing (B1)",
             "Stricturing (B2)", "Penetrating (B3)", "Both stricturing and penetrating (B2B3)"]]
